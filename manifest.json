@@ -1,13 +1,13 @@
 {
-  "id": "dev.bdg.example-basic",
+  "id": "dev.bdg.import",
   "version": "0.1.0",
   "name": {
-    "zh": "示例插件（基础）",
-    "en": "Example Plugin (basic)"
+    "zh": "时间戳导入",
+    "en": "Timestamp Import"
   },
   "description": {
-    "zh": "验证插件宿主加载/启停的最小示例，同时提供 renderer 与 main 两个入口。",
-    "en": "Minimal sample verifying the plugin host load/unload with both a renderer and a main entry."
+    "zh": "从文本按时间戳导入踩点：整数按毫秒、含小数按秒，导入时新建轨道并放置踩点。",
+    "en": "Import markers from timestamps: integers are milliseconds, decimals are seconds; creates a new track on import."
   },
   "main": "main.js",
   "renderer": "renderer.js"
