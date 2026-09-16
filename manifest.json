@@ -6,8 +6,8 @@
     "en": "Timestamp Import"
   },
   "description": {
-    "zh": "从文本按时间戳导入踩点：整数按毫秒、含小数按秒，导入时新建轨道并放置踩点。",
-    "en": "Import markers from timestamps: integers are milliseconds, decimals are seconds; creates a new track on import."
+    "zh": "从文本时间戳或 MIDI 文件导入踩点。时间戳整数按毫秒、含小数按秒；MIDI 按音符时间新建轨道并放置踩点。",
+    "en": "Import markers from text timestamps or MIDI files. Timestamps: integers are milliseconds, decimals are seconds; MIDI note times create new tracks of markers."
   },
   "main": "main.js",
   "renderer": "renderer.js"
