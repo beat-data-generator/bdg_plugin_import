@@ -1,6 +1,48 @@
 window.__bdgPluginRegister(function activate(api) {
   api.log("renderer entry activated (id=" + api.id + ")");
 
+  function notify(message, isError) {
+    api.log((isError ? "[import error] " : "[import] ") + message);
+    try {
+      var host = document.body || document.documentElement;
+      if (!host) throw new Error("no document body");
+      var old = document.querySelector("[data-bdg-toast]");
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      var box = document.createElement("div");
+      box.setAttribute("data-bdg-toast", "1");
+      box.textContent = message;
+      box.style.position = "fixed";
+      box.style.left = "50%";
+      box.style.top = "16px";
+      box.style.transform = "translateX(-50%)";
+      box.style.zIndex = "2147483647";
+      box.style.maxWidth = "70vw";
+      box.style.boxSizing = "border-box";
+      box.style.padding = "10px 16px";
+      box.style.borderRadius = "6px";
+      box.style.font = "13px/1.5 system-ui, sans-serif";
+      box.style.whiteSpace = "pre-wrap";
+      box.style.wordBreak = "break-word";
+      box.style.color = "#fff";
+      box.style.background = isError ? "#b91c1c" : "#1f2937";
+      box.style.boxShadow = "0 4px 16px rgba(0,0,0,.35)";
+      box.style.pointerEvents = "auto";
+      box.style.cursor = "pointer";
+      box.title = "点击关闭";
+      box.addEventListener("click", function () {
+        if (box.parentNode) box.parentNode.removeChild(box);
+      });
+      host.appendChild(box);
+      setTimeout(function () {
+        if (box.parentNode) box.parentNode.removeChild(box);
+      }, isError ? 8000 : 3500);
+    } catch (e) {
+      try {
+        window.alert(message);
+      } catch (e2) {}
+    }
+  }
+
   function parseTimestamp(token) {
     if (token === undefined || token === null) return null;
     var t = String(token).trim().toLowerCase();
@@ -57,7 +99,14 @@ window.__bdgPluginRegister(function activate(api) {
               count++;
             }
           });
-          api.log("timestamp importer: added " + count + " markers");
+          if (count > 0) {
+            notify("已导入 " + count + " 个踩点（" + (trackName || "Imported") + "）");
+          } else {
+            notify("未识别到任何时间戳，请检查文件格式", true);
+          }
+        })
+        .catch(function (err) {
+          notify("时间戳导入失败：" + errMessage(err), true);
         });
     },
   });
@@ -65,28 +114,22 @@ window.__bdgPluginRegister(function activate(api) {
   api.ui.registerImporter({
     label: { zh: "导入 MIDI 踩点", en: "Import MIDI markers" },
     run: function () {
-      var pickedPath = "";
-      api.system
-        .pickFile({
-          title: "Open MIDI file",
-          filters: [
-            { name: "MIDI", extensions: ["mid", "midi"] },
-            { name: "All files", extensions: ["*"] },
-          ],
-        })
-        .then(function (path) {
-          if (!path) return;
-          pickedPath = path;
-          return api.callMain("parseMidiFile", path);
-        })
+      api.callMain("importMidi")
         .then(function (data) {
-          if (!data || data.error) {
-            api.log("midi importer failed:", (data && data.error) || "no data");
+          if (!data) {
+            notify("MIDI 导入失败：主进程无返回数据", true);
             return;
           }
-          var fileBase = pickedPath
-            .replace(/^.*[\\/]/, "")
-            .replace(/\.[^.]+$/, "");
+          if (data.canceled) return;
+          if (data.error) {
+            notify("MIDI 导入失败：" + data.error, true);
+            return;
+          }
+          if (!data.tracks || !data.tracks.length) {
+            notify("MIDI 导入失败：文件不含任何轨道", true);
+            return;
+          }
+          var fileBase = data.fileName || "MIDI";
           var total = 0;
           var trackCount = 0;
           api.project.edit.batch(function () {
@@ -112,16 +155,32 @@ window.__bdgPluginRegister(function activate(api) {
           api.log(
             "midi importer: added " + total + " markers on " + trackCount + " tracks",
           );
+          if (total > 0) {
+            notify("已导入 " + total + " 个踩点（" + trackCount + " 轨）");
+          } else {
+            notify("MIDI 中未找到 Note On 音符", true);
+          }
         })
         .catch(function (err) {
-          api.log("midi importer error:", err);
+          notify("MIDI 导入失败：" + errMessage(err), true);
         });
     },
   });
 
+  function errMessage(err) {
+    if (!err) return "未知错误";
+    if (typeof err === "string") return err;
+    if (err.message) return err.message;
+    return String(err);
+  }
+
   api.log("contributions registered");
 
   return function dispose() {
+    try {
+      var old = document.querySelector("[data-bdg-toast]");
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+    } catch (e) {}
     api.log("renderer entry disposed");
   };
 });

@@ -13,7 +13,7 @@ Beat Data Generator 插件：从文本时间戳或 MIDI 文件批量导入踩点
 菜单「文件 → 导入…」，选择：
 
 - **导入时间戳踩点** — 读取文本文件（`.txt` / `.csv` / `.tsv` / `.log`）。
-- **导入 MIDI 踩点** — 读取 MIDI 文件（`.mid` / `.midi`）。
+- **导入 MIDI 踩点** — 由主进程弹出文件对话框，读取 MIDI 文件（`.mid` / `.midi`）。
 
 ## 时间戳格式
 
@@ -53,6 +53,15 @@ Beat Data Generator 插件：从文本时间戳或 MIDI 文件批量导入踩点
 - 文本导入的轨道以文件名命名（`beep.txt` → `beep`）。
 - 所有踩点在同一个编辑批次里添加，可一次撤销。
 - MIDI 的二进制解析在 `main.js`（Node 侧）完成，渲染层通过 `api.callMain` 调用。
+
+## 故障排查
+
+- 导入成功/失败都会在编辑器顶部弹出浮层提示（成功为深色、失败为红色），点击可关闭。
+- MIDI 报「主进程无法加载 Node 的 fs 模块」：说明宿主主进程未向插件暴露 `require`，
+  二进制解析无法进行，需要宿主支持。
+- MIDI 报「主进程无法加载 electron」：宿主主进程未暴露 `electron`，无法弹出文件对话框。
+  此时可在渲染层用 `api.system.pickFile` 取路径，再 `api.callMain("importMidi", path)` 传入。
+- MIDI 报「未找到 Note On 音符」：文件可能只有控制/踏板事件，或音符以其它形式表达。
 
 ## 许可
 

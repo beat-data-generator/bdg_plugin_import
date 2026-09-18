@@ -1,15 +1,31 @@
-var fs = require("fs");
+var fs = null;
+try {
+  fs = require("fs");
+} catch (e) {
+  fs = null;
+}
 
 var DEFAULT_TEMPO = 500000;
 
 module.exports = function activate(ctx) {
   ctx.log("main entry activated", ctx.id);
 
-  ctx.registerHandler("parseMidiFile", function (path) {
+  ctx.registerHandler("importMidi", function () {
     try {
+      if (!fs) {
+        return { error: "主进程无法加载 Node 的 fs 模块（无法读取 MIDI 二进制）" };
+      }
+      var path = extractPath(arguments);
+      if (!path) {
+        var picked = pickMidiViaDialog();
+        if (!picked.ok) return { error: picked.error };
+        if (!picked.path) return { canceled: true };
+        path = picked.path;
+      }
+      ctx.log("main: parsing MIDI", path);
       return parseMidiFile(path);
     } catch (err) {
-      return { error: err && err.message ? err.message : String(err) };
+      return { error: (err && err.stack) || (err && err.message) || String(err) };
     }
   });
 
@@ -17,6 +33,53 @@ module.exports = function activate(ctx) {
     ctx.log("main entry disposed");
   });
 };
+
+function extractPath(args) {
+  for (var i = 0; i < args.length; i++) {
+    var a = args[i];
+    if (typeof a === "string" && a) return a;
+    if (a && typeof a === "object") {
+      if (typeof a.path === "string" && a.path) return a.path;
+      if (typeof a.filePath === "string" && a.filePath) return a.filePath;
+      if (Array.isArray(a)) {
+        var inner = extractPath(a);
+        if (inner) return inner;
+      }
+      if (a.args && typeof a.args === "object") {
+        var inner2 = extractPath(a.args);
+        if (inner2) return inner2;
+      }
+    }
+  }
+  return null;
+}
+
+function pickMidiViaDialog() {
+  var electron;
+  try {
+    electron = require("electron");
+  } catch (e) {
+    return { ok: false, error: "主进程无法加载 electron（无法弹出文件对话框）" };
+  }
+  var dialog = electron && electron.dialog;
+  if (!dialog || !dialog.showOpenDialogSync) {
+    return { ok: false, error: "宿主未提供 electron.dialog.showOpenDialogSync" };
+  }
+  try {
+    var result = dialog.showOpenDialogSync({
+      title: "Open MIDI file",
+      properties: ["openFile"],
+      filters: [
+        { name: "MIDI", extensions: ["mid", "midi"] },
+        { name: "All files", extensions: ["*"] },
+      ],
+    });
+    if (!result || !result.length) return { ok: true, path: null };
+    return { ok: true, path: result[0] };
+  } catch (e) {
+    return { ok: false, error: "打开文件对话框失败：" + (e && e.message ? e.message : e) };
+  }
+}
 
 function parseMidiFile(path) {
   var buf = fs.readFileSync(path);
@@ -64,6 +127,7 @@ function parseMidiFile(path) {
   }
 
   return {
+    fileName: String(path).replace(/^.*[\\/]/, "").replace(/\.[^.]+$/, ""),
     format: format,
     division: division,
     ppq: isSmpte ? null : ppq,
