@@ -129,6 +129,11 @@ interface PluginApi {
       moveMarker: (id: string, beat: number) => boolean;
       removeMarker: (id: string) => void;
       setMarkerAttrs: (id: string, attrs: Record<string, unknown>) => void;
+      /** Set a main marker's loop group config (undo aware); null clears it. */
+      setMarkerLoop: (
+        id: string,
+        cfg: { interval: number; count: number; exclude?: number[] } | null,
+      ) => void;
       addBpmPoint: (beat: number) => string | null;
       removeBpmPoint: (id: string) => void;
       setBaseBpm: (v: number) => void;
