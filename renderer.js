@@ -2,45 +2,12 @@ window.__bdgPluginRegister(function activate(api) {
   api.log("renderer entry activated (id=" + api.id + ")");
 
   function notify(message, isError) {
+    // v2: use the host toast instead of injecting our own DOM / window.alert.
     api.log((isError ? "[import error] " : "[import] ") + message);
-    try {
-      var host = document.body || document.documentElement;
-      if (!host) throw new Error("no document body");
-      var old = document.querySelector("[data-bdg-toast]");
-      if (old && old.parentNode) old.parentNode.removeChild(old);
-      var box = document.createElement("div");
-      box.setAttribute("data-bdg-toast", "1");
-      box.textContent = message;
-      box.style.position = "fixed";
-      box.style.left = "50%";
-      box.style.top = "16px";
-      box.style.transform = "translateX(-50%)";
-      box.style.zIndex = "2147483647";
-      box.style.maxWidth = "70vw";
-      box.style.boxSizing = "border-box";
-      box.style.padding = "10px 16px";
-      box.style.borderRadius = "6px";
-      box.style.font = "13px/1.5 system-ui, sans-serif";
-      box.style.whiteSpace = "pre-wrap";
-      box.style.wordBreak = "break-word";
-      box.style.color = "#fff";
-      box.style.background = isError ? "#b91c1c" : "#1f2937";
-      box.style.boxShadow = "0 4px 16px rgba(0,0,0,.35)";
-      box.style.pointerEvents = "auto";
-      box.style.cursor = "pointer";
-      box.title = "点击关闭";
-      box.addEventListener("click", function () {
-        if (box.parentNode) box.parentNode.removeChild(box);
-      });
-      host.appendChild(box);
-      setTimeout(function () {
-        if (box.parentNode) box.parentNode.removeChild(box);
-      }, isError ? 8000 : 3500);
-    } catch (e) {
-      try {
-        window.alert(message);
-      } catch (e2) {}
-    }
+    api.ui.notify({
+      message: message,
+      type: isError ? "error" : "success",
+    });
   }
 
   function parseTimestamp(token) {
@@ -177,10 +144,6 @@ window.__bdgPluginRegister(function activate(api) {
   api.log("contributions registered");
 
   return function dispose() {
-    try {
-      var old = document.querySelector("[data-bdg-toast]");
-      if (old && old.parentNode) old.parentNode.removeChild(old);
-    } catch (e) {}
     api.log("renderer entry disposed");
   };
 });

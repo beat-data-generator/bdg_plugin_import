@@ -1,6 +1,7 @@
 {
   "id": "dev.bdg.import",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "apiVersion": 2,
   "name": {
     "zh": "时间戳导入",
     "en": "Timestamp Import"
